@@ -1,0 +1,17 @@
+<package>
+  <description brief="diag_sim">
+
+     diag_sim
+
+  </description>
+  <author>Maciej Stefańczyk</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/diag_sim</url>
+
+  <depend package="rospy"/>
+  <depend package="diagnostic_msgs"/>
+  
+</package>
+
+

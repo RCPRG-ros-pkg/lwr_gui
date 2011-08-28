@@ -1,0 +1,12 @@
+<stack>
+  <description brief="lwr_gui">Some graphical tools for Kuka LWR robot.</description>
+  <author>Maciej Stefańczyk</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url></url>
+  <depend stack="diagnostics_monitors" /> <!-- robot_monitor -->
+  <depend stack="ros" /> <!-- roslib -->
+  <depend stack="ros_comm" /> <!-- std_srvs, std_msgs, rospy -->
+  <depend stack="rx" /> <!-- rxtools -->
+
+</stack>
