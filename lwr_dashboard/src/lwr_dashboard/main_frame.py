@@ -51,13 +51,11 @@ from roslib import rosenv
 from os import path
 import threading
 
-#from breaker_control import BreakerControl
 from status_control import StatusControl
-#from power_state_control import PowerStateControl
 from fri_control import FRIControl
+from robot_control import RobotControl
 from diagnostics_frame import DiagnosticsFrame
 from rosout_frame import RosoutFrame
-#from cpu_frame import CpuFrame
 
 class MainFrame(wx.Frame):
     _CONFIG_WINDOW_X = "/Window/X"
@@ -155,7 +153,16 @@ class MainFrame(wx.Frame):
         self._fri_control = FRIControl(self, wx.ID_ANY, icons_path)
         self._fri_control.SetToolTip(wx.ToolTip("FRI: Stale"))
         static_sizer.Add(self._fri_control, 1, wx.EXPAND)
-#        
+
+        # Robot State        
+        static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " Robot "), wx.HORIZONTAL)
+        sizer.Add(static_sizer, 0)
+        
+        
+        self._robot_control = RobotControl(self, wx.ID_ANY, icons_path)
+        self._robot_control.SetToolTip(wx.ToolTip("Robot: Stale"))
+        static_sizer.Add(self._robot_control, 1, wx.EXPAND)
+
 #        # Laptop Battery State
 #        static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Laptop"), wx.HORIZONTAL)
 #        sizer.Add(static_sizer, 0)
@@ -275,16 +282,26 @@ class MainFrame(wx.Frame):
       self._last_dashboard_message_time = rospy.get_time()
 
       fri_status = {}
+      robot_status = {}
+      
       for status in msg.status:
           if status.name == "/FRI state":
               for value in status.values:
                   fri_status[value.key] = value.value
+          if status.name == "/robot state":
+              for value in status.values:
+                  robot_status[value.key] = value.value
 
  
       if (fri_status):
         self._fri_control.set_state(fri_status)
       else:
         self._fri_control.set_stale()
+        
+      if (robot_status):
+        self._robot_control.set_state(robot_status)
+      else:
+        self._robot_control.set_stale()
 
     def update_rosout(self):
         summary_dur = 30.0

@@ -53,6 +53,10 @@ def diag_sim():
         state = ""
         qual = ""
         msg = ""
+        warning = ""
+        error = ""
+        power = ""
+        strategy = ""
         lvl = diagnostic_msgs.msg.DiagnosticStatus.OK
         
         #FRI info                                                                                                                              
@@ -66,21 +70,37 @@ def diag_sim():
             msg = "Communication quality PERFECT"
             qual = "PERFECT"
             state = "monitor"
+            error = "0000000"
+            warning = "0000000"
+            power = "1111111"
+            strategy = "Position"
         if mod == 1:
             lvl = diagnostic_msgs.msg.DiagnosticStatus.OK
             msg = "Communication quality OK"
             qual = "OK"
             state = "monitor"
+            error = "0000000"
+            warning = "0000000"
+            power = "1110011"
+            strategy = "Cartesian impedance"
         if mod == 2:
             lvl = diagnostic_msgs.msg.DiagnosticStatus.WARN
             msg = "Communication quality BAD"
             qual = "BAD"
             state = "command"
+            error = "0000001"
+            warning = "0000100"
+            power = "1111111"
+            strategy = "Joint impedance"
         if mod == 3:
             lvl = diagnostic_msgs.msg.DiagnosticStatus.ERROR
             msg = "Communication quality UNACCEPTABLE"
             qual = "UNACCEPTABLE"
             state = "command"
+            error = "1000000"
+            warning = "0100000"
+            power = "1110011"
+            strategy = "Invalid"
             
         stat.level = lvl 
         stat.message = msg
@@ -89,10 +109,10 @@ def diag_sim():
         stat.values.append(diagnostic_msgs.msg.KeyValue("State",            state))
         stat.values.append(diagnostic_msgs.msg.KeyValue("Quality",          qual))
         stat.values.append(diagnostic_msgs.msg.KeyValue("Desired Send Sample Time", "3"))
-        stat.values.append(diagnostic_msgs.msg.KeyValue("Desired Command Sample Time", "4"))
+        stat.values.append(diagnostic_msgs.msg.KeyValue("Desired Command Sample Time", str(mod*0.025+0.025)))
         stat.values.append(diagnostic_msgs.msg.KeyValue("Safety Limits",    "5"))
         stat.values.append(diagnostic_msgs.msg.KeyValue("Answer Rate",      "6"))
-        stat.values.append(diagnostic_msgs.msg.KeyValue("Latency",          "1"))
+        stat.values.append(diagnostic_msgs.msg.KeyValue("Latency",          "7"))
         stat.values.append(diagnostic_msgs.msg.KeyValue("Jitter",           "8"))
         stat.values.append(diagnostic_msgs.msg.KeyValue("Average Missed Answer Packages", "9"))
         stat.values.append(diagnostic_msgs.msg.KeyValue("Total Missed Packages", "10"))
@@ -108,10 +128,10 @@ def diag_sim():
         stat.message = "OK"
     
 
-        stat.values.append(diagnostic_msgs.msg.KeyValue("Power",            "0"))
-        stat.values.append(diagnostic_msgs.msg.KeyValue("Control Strategy", "1"))
-        stat.values.append(diagnostic_msgs.msg.KeyValue("Error",            "2"))
-        stat.values.append(diagnostic_msgs.msg.KeyValue("Warning",          "3"))
+        stat.values.append(diagnostic_msgs.msg.KeyValue("Power",            power))
+        stat.values.append(diagnostic_msgs.msg.KeyValue("Control Strategy", strategy))
+        stat.values.append(diagnostic_msgs.msg.KeyValue("Error",            error))
+        stat.values.append(diagnostic_msgs.msg.KeyValue("Warning",          warning))
 
         #append
         diag.status.append(stat)

@@ -37,24 +37,20 @@ import wx
 
 from os import path
 
-class FRIControl(wx.Window):
+class RobotControl(wx.Window):
   def __init__(self, parent, id, icons_path):
-    wx.Window.__init__(self, parent, id, wx.DefaultPosition, wx.Size(60, 40))
-
-    bitmap = wx.Bitmap(path.join(icons_path, "state.png"), wx.BITMAP_TYPE_PNG)
-    self._state_bitmap = (bitmap.GetSubBitmap(wx.Rect(0,  0, 40, 40)),
-                          bitmap.GetSubBitmap(wx.Rect(40, 0, 40, 40)),
-                          bitmap.GetSubBitmap(wx.Rect(80, 0, 40, 40)))
+    wx.Window.__init__(self, parent, id, wx.DefaultPosition, wx.Size(60, 50))
 
     bitmap = wx.Bitmap(path.join(icons_path, "motors.png"), wx.BITMAP_TYPE_PNG)
-    self._qual_bitmap = (bitmap.GetSubBitmap(wx.Rect(40, 0, 40, 40)),
-                          bitmap.GetSubBitmap(wx.Rect( 0, 0, 40, 40)),
-                          bitmap.GetSubBitmap(wx.Rect(80, 0, 40, 40)))
+    self._state_bitmap = (bitmap.GetSubBitmap(wx.Rect(40,  0, 40, 40)),
+                          bitmap.GetSubBitmap(wx.Rect(0,   0, 40, 40)),
+                          bitmap.GetSubBitmap(wx.Rect(80,  0, 40, 40)),
+                          bitmap.GetSubBitmap(wx.Rect(120, 0, 40, 40)))
 
     self._status = {}
     self._stale = True
 
-    self.SetSize(wx.Size(150, 40))
+    self.SetSize(wx.Size(160, 40))
 
     self.Bind(wx.EVT_PAINT, self.on_paint)
 
@@ -64,56 +60,68 @@ class FRIControl(wx.Window):
     dc.SetBackground(wx.Brush(self.GetBackgroundColour()))
     dc.Clear()
 
-    w = self.GetSize().GetWidth()
-    h = self.GetSize().GetHeight()
+#    w = self.GetSize().GetWidth()
+#    h = self.GetSize().GetHeight()
+#
+#    qual = "?"
+#    rate = "?"
+#
 
-    qual = "?"
-    rate = "?"
+    strategy = "?"
 
+    allok = False
+    
     if (self._stale):
-        dc.DrawBitmap(self._state_bitmap[2], 0, 0, True)
+        dc.DrawBitmap(self._state_bitmap[3], 0, 0, True)
     else:
-        qual = self._status["Quality"]
-        rate = "%.0f" % (1000*float(self._status["Desired Command Sample Time"]))
-        
-        if (self._status["State"] == "command"):
-            dc.DrawBitmap(self._state_bitmap[0], 0, 0, True)
+        if (self._status["Error"] == "0000000" and self._status["Warning"] == "0000000"):
+            allok = True
         else:
+            allok = False
+        
+        if (allok and self._status["Power"] == "1111111"):
+            dc.DrawBitmap(self._state_bitmap[0], 0, 0, True)
+        
+        if (allok and self._status["Power"] != "1111111"):
             dc.DrawBitmap(self._state_bitmap[1], 0, 0, True)
+        
+        if (not allok):
+            dc.DrawBitmap(self._state_bitmap[2], 0, 0, True)
             
-        if (qual == "PERFECT" or qual == "OK"):
-            dc.DrawBitmap(self._qual_bitmap[0], 40, 0, True)
-        if (qual == "BAD"): 
-            dc.DrawBitmap(self._qual_bitmap[1], 40, 0, True)
-        if (qual == "UNACCEPTABLE"):
-            dc.DrawBitmap(self._qual_bitmap[2], 40, 0, True)
+        if (self._status["Control Strategy"] == "Position"):
+            strategy = "Pos"
+        if (self._status["Control Strategy"] == "Joint impedance"):
+            strategy = "J. imp"
+        if (self._status["Control Strategy"] == "Cartesian impedance"):
+            strategy = "C. imp"
+        if (self._status["Control Strategy"] == "Invalid"):
+            strategy = "Inv"
 
     fnt = dc.GetFont()
     fnt.SetPointSize(7)
     dc.SetFont(fnt)
-    dc.DrawLabel("Rate[ms]", wx.Rect(90, 0, 60, 20), wx.ALIGN_RIGHT|wx.ALIGN_TOP)
+    dc.DrawLabel("Control strategy", wx.Rect(50, 0, 100, 20), wx.ALIGN_RIGHT|wx.ALIGN_TOP)
     
     fnt.SetPointSize(20)
     fnt.SetWeight(wx.FONTWEIGHT_BOLD)
     dc.SetFont(fnt)
-    dc.DrawLabel("%s" % rate, wx.Rect(90, 8, 60, 20), wx.ALIGN_RIGHT|wx.ALIGN_TOP)
+    dc.DrawLabel("%s" % strategy, wx.Rect(50, 8, 100, 20), wx.ALIGN_RIGHT|wx.ALIGN_TOP)
 
   def set_state(self, msg):
     self._stale = False
     self._status = msg;
+    
     tooltip = ""
     
     for key, value in msg.items():
         tooltip = tooltip + "%s: %s\n" % (key, value)
     
-    tool = wx.ToolTip(tooltip)
-    tool.SetDelay(1)
-    self.SetToolTip(tool)
+    self.SetToolTip(wx.ToolTip(tooltip))
     
     self.Refresh()
 
   def set_stale(self):
-    self.SetToolTip(wx.ToolTip("FRI: Stale"))
+    self.SetToolTip(wx.ToolTip("Robot: Stale"))
     self._stale = True
     self.Refresh()
 
