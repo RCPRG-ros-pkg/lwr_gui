@@ -47,10 +47,15 @@ class RobotControl(wx.Window):
                           bitmap.GetSubBitmap(wx.Rect(80,  0, 40, 40)),
                           bitmap.GetSubBitmap(wx.Rect(120, 0, 40, 40)))
 
+    bitmap = wx.Bitmap(path.join(icons_path, "long_buttons.png"), wx.BITMAP_TYPE_PNG)
+    self._screen_bitmap = (bitmap.GetSubBitmap(wx.Rect(0, 0, 80, 40)),
+                          bitmap.GetSubBitmap(wx.Rect( 80, 40, 80, 40)),
+                          bitmap.GetSubBitmap(wx.Rect( 0,  40, 80, 40)))
+
     self._status = {}
     self._stale = True
 
-    self.SetSize(wx.Size(160, 40))
+    self.SetSize(wx.Size(120, 40))
 
     self.Bind(wx.EVT_PAINT, self.on_paint)
 
@@ -73,6 +78,7 @@ class RobotControl(wx.Window):
     
     if (self._stale):
         dc.DrawBitmap(self._state_bitmap[3], 0, 0, True)
+        dc.DrawBitmap(self._screen_bitmap[2], 40, 0, True)
     else:
         if (self._status["Error"] == "0000000" and self._status["Warning"] == "0000000"):
             allok = True
@@ -91,21 +97,26 @@ class RobotControl(wx.Window):
         if (self._status["Control Strategy"] == "Position"):
             strategy = "Pos"
         if (self._status["Control Strategy"] == "Joint impedance"):
-            strategy = "J. imp"
+            strategy = "J-imp"
         if (self._status["Control Strategy"] == "Cartesian impedance"):
-            strategy = "C. imp"
+            strategy = "C-imp"
         if (self._status["Control Strategy"] == "Invalid"):
             strategy = "Inv"
+
+        if (strategy != "Inv"):
+            dc.DrawBitmap(self._screen_bitmap[0], 40, 0, True)
+        else:
+            dc.DrawBitmap(self._screen_bitmap[1], 40, 0, True)
 
     fnt = dc.GetFont()
     fnt.SetPointSize(7)
     dc.SetFont(fnt)
-    dc.DrawLabel("Control strategy", wx.Rect(50, 0, 100, 20), wx.ALIGN_RIGHT|wx.ALIGN_TOP)
+    dc.DrawLabel("Control", wx.Rect(45, 5, 70, 32), wx.ALIGN_LEFT|wx.ALIGN_TOP)
     
-    fnt.SetPointSize(20)
+    fnt.SetPointSize(14)
     fnt.SetWeight(wx.FONTWEIGHT_BOLD)
     dc.SetFont(fnt)
-    dc.DrawLabel("%s" % strategy, wx.Rect(50, 8, 100, 20), wx.ALIGN_RIGHT|wx.ALIGN_TOP)
+    dc.DrawLabel("%s" % strategy, wx.Rect(45, 5, 70, 32), wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM)
 
   def set_state(self, msg):
     self._stale = False

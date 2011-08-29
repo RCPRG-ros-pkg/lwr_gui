@@ -46,15 +46,21 @@ class FRIControl(wx.Window):
                           bitmap.GetSubBitmap(wx.Rect(40, 0, 40, 40)),
                           bitmap.GetSubBitmap(wx.Rect(80, 0, 40, 40)))
 
-    bitmap = wx.Bitmap(path.join(icons_path, "motors.png"), wx.BITMAP_TYPE_PNG)
+    bitmap = wx.Bitmap(path.join(icons_path, "communication.png"), wx.BITMAP_TYPE_PNG)
     self._qual_bitmap = (bitmap.GetSubBitmap(wx.Rect(40, 0, 40, 40)),
                           bitmap.GetSubBitmap(wx.Rect( 0, 0, 40, 40)),
-                          bitmap.GetSubBitmap(wx.Rect(80, 0, 40, 40)))
+                          bitmap.GetSubBitmap(wx.Rect(80, 0, 40, 40)),
+                          bitmap.GetSubBitmap(wx.Rect(120, 0, 40, 40)))
+    
+    bitmap = wx.Bitmap(path.join(icons_path, "long_buttons.png"), wx.BITMAP_TYPE_PNG)
+    self._screen_bitmap = (bitmap.GetSubBitmap(wx.Rect(0,   0, 80, 40)),
+                          bitmap.GetSubBitmap(wx.Rect( 80, 40, 80, 40)),
+                          bitmap.GetSubBitmap(wx.Rect( 0,  40, 80, 40)))
 
     self._status = {}
     self._stale = True
 
-    self.SetSize(wx.Size(150, 40))
+    self.SetSize(wx.Size(160, 40))
 
     self.Bind(wx.EVT_PAINT, self.on_paint)
 
@@ -72,6 +78,8 @@ class FRIControl(wx.Window):
 
     if (self._stale):
         dc.DrawBitmap(self._state_bitmap[2], 0, 0, True)
+        dc.DrawBitmap(self._qual_bitmap[3], 40, 0, True)
+        dc.DrawBitmap(self._screen_bitmap[2], 80, 0, True)
     else:
         qual = self._status["Quality"]
         rate = "%.0f" % (1000*float(self._status["Desired Command Sample Time"]))
@@ -88,15 +96,18 @@ class FRIControl(wx.Window):
         if (qual == "UNACCEPTABLE"):
             dc.DrawBitmap(self._qual_bitmap[2], 40, 0, True)
 
+    
+        dc.DrawBitmap(self._screen_bitmap[0], 80, 0, True)
+
     fnt = dc.GetFont()
     fnt.SetPointSize(7)
     dc.SetFont(fnt)
-    dc.DrawLabel("Rate[ms]", wx.Rect(90, 0, 60, 20), wx.ALIGN_RIGHT|wx.ALIGN_TOP)
+    dc.DrawLabel("Rate [ms]", wx.Rect(85, 5, 70, 32), wx.ALIGN_LEFT|wx.ALIGN_TOP)
     
-    fnt.SetPointSize(20)
+    fnt.SetPointSize(14)
     fnt.SetWeight(wx.FONTWEIGHT_BOLD)
     dc.SetFont(fnt)
-    dc.DrawLabel("%s" % rate, wx.Rect(90, 8, 60, 20), wx.ALIGN_RIGHT|wx.ALIGN_TOP)
+    dc.DrawLabel("%s" % rate, wx.Rect(85, 5, 70, 32), wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM)
 
   def set_state(self, msg):
     self._stale = False
