@@ -42,8 +42,8 @@ class FRIControl(wx.Window):
     wx.Window.__init__(self, parent, id, wx.DefaultPosition, wx.Size(60, 40))
 
     bitmap = wx.Bitmap(path.join(icons_path, "state.png"), wx.BITMAP_TYPE_PNG)
-    self._state_bitmap = (bitmap.GetSubBitmap(wx.Rect(0,  0, 40, 40)),
-                          bitmap.GetSubBitmap(wx.Rect(40, 0, 40, 40)),
+    self._state_bitmap = (bitmap.GetSubBitmap(wx.Rect(40, 0, 40, 40)),
+                          bitmap.GetSubBitmap(wx.Rect(0,  0, 40, 40)),
                           bitmap.GetSubBitmap(wx.Rect(80, 0, 40, 40)))
 
     bitmap = wx.Bitmap(path.join(icons_path, "communication.png"), wx.BITMAP_TYPE_PNG)
