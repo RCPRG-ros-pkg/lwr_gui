@@ -30,12 +30,19 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+
+# 
+# 1 - monitor
+# 2 - command
+
 import roslib
 roslib.load_manifest('lwr_dashboard')
+import rospy
 
 import wx
 
 from os import path
+import std_msgs
 
 class FRIControl(wx.Window):
   def __init__(self, parent, id, icons_path):
@@ -60,10 +67,35 @@ class FRIControl(wx.Window):
 
     self._status = {}
     self._stale = True
+    
+    self.MONITOR = 1
+    self.COMMAND = 2
 
     self.SetSize(wx.Size(120, 40))
 
+
+    self._fri_mode_topic = rospy.Publisher('fri_set_mode', std_msgs.msg.Int32)
+
     self.Bind(wx.EVT_PAINT, self.on_paint)
+    self.Bind(wx.EVT_LEFT_DOWN, self.on_left_down)
+
+  def on_left_down(self, evt):
+    menu = wx.Menu()
+    menu.Bind(wx.EVT_MENU, self.on_monitor, menu.Append(wx.ID_ANY, "Monitor"))
+    menu.Bind(wx.EVT_MENU, self.on_command, menu.Append(wx.ID_ANY, "Command"))
+    
+    #self.toggle(True)
+    self.PopupMenu(menu)
+    #self.toggle(False)
+
+  def on_monitor(self, evt):
+    self.set_mode(self.MONITOR)
+    
+  def on_command(self, evt):
+    self.set_mode(self.COMMAND)
+
+  def set_mode(self, mode):
+    self._fri_mode_topic.publish(std_msgs.msg.Int32(mode))
 
   def on_paint(self, evt):
     dc = wx.BufferedPaintDC(self)
