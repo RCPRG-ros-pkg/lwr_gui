@@ -42,12 +42,12 @@ class StatusControl(wx.Window):
     wx.Window.__init__(self, parent, id)
     self.SetSize(wx.Size(40, 40))
     
-    base_bitmap = wx.Bitmap(path.join(icons_path, "%s.png"%(base_name)), wx.BITMAP_TYPE_PNG);
+    base_bitmap = wx.Bitmap(path.join(icons_path, "%s.png" % base_name), wx.BITMAP_TYPE_PNG);
     
-    self._ok    = (base_bitmap.GetSubBitmap(wx.Rect( 40,  0, 40, 40)),
-                   base_bitmap.GetSubBitmap(wx.Rect( 40, 40, 40, 40)))
-    self._warn  = (base_bitmap.GetSubBitmap(wx.Rect(  0,  0, 40, 40)),
+    self._ok    = (base_bitmap.GetSubBitmap(wx.Rect(  0,  0, 40, 40)),
                    base_bitmap.GetSubBitmap(wx.Rect(  0, 40, 40, 40)))
+    self._warn  = (base_bitmap.GetSubBitmap(wx.Rect( 40,  0, 40, 40)),
+                   base_bitmap.GetSubBitmap(wx.Rect( 40, 40, 40, 40)))
     self._error = (base_bitmap.GetSubBitmap(wx.Rect( 80,  0, 40, 40)),
                    base_bitmap.GetSubBitmap(wx.Rect( 80, 40, 40, 40)))
     self._stale = (base_bitmap.GetSubBitmap(wx.Rect(120,  0, 40, 40)),
@@ -106,14 +106,17 @@ class StatusControl(wx.Window):
     dc.Clear()
     
     size = self.GetSize();
-    
+        
     bitmap = None
     if (self._toggled):
       bitmap = self._color[1]
     else:
       bitmap = self._color[0]
     
-    dc.DrawBitmap(bitmap, (size.GetWidth() - bitmap.GetWidth()) / 2.0, (size.GetHeight() - bitmap.GetHeight()) / 2.0, True)
+    offset_x = (size.GetWidth() - bitmap.GetWidth()) / 2.0
+    offset_y = (size.GetHeight() - bitmap.GetHeight()) / 2.0
+    
+    dc.DrawBitmap(bitmap, offset_x, offset_y, True)
 
   def set_ok(self):
     if (self._color == self._ok):

@@ -47,17 +47,6 @@ import std_msgs
 class FRIControl(wx.Window):
   def __init__(self, parent, id, icons_path):
     wx.Window.__init__(self, parent, id, wx.DefaultPosition, wx.Size(60, 40))
-
-    bitmap = wx.Bitmap(path.join(icons_path, "state.png"), wx.BITMAP_TYPE_PNG)
-    self._state_bitmap = (bitmap.GetSubBitmap(wx.Rect(40, 0, 40, 40)),
-                          bitmap.GetSubBitmap(wx.Rect(0,  0, 40, 40)),
-                          bitmap.GetSubBitmap(wx.Rect(80, 0, 40, 40)))
-
-    bitmap = wx.Bitmap(path.join(icons_path, "communication.png"), wx.BITMAP_TYPE_PNG)
-    self._qual_bitmap = (bitmap.GetSubBitmap(wx.Rect(40, 0, 40, 40)),
-                          bitmap.GetSubBitmap(wx.Rect( 0, 0, 40, 40)),
-                          bitmap.GetSubBitmap(wx.Rect(80, 0, 40, 40)),
-                          bitmap.GetSubBitmap(wx.Rect(120, 0, 40, 40)))
     
     bitmap = wx.Bitmap(path.join(icons_path, "long_buttons.png"), wx.BITMAP_TYPE_PNG)
     self._screen_bitmap = (bitmap.GetSubBitmap(wx.Rect(0,   0, 80, 40)),
@@ -68,34 +57,9 @@ class FRIControl(wx.Window):
     self._status = {}
     self._stale = True
     
-    self.MONITOR = 2
-    self.COMMAND = 1
-
-    self.SetSize(wx.Size(120, 40))
-
-
-    self._fri_mode_topic = rospy.Publisher('fri_set_mode', std_msgs.msg.Int32)
+    self.SetSize(wx.Size(80, 40))
 
     self.Bind(wx.EVT_PAINT, self.on_paint)
-    self.Bind(wx.EVT_LEFT_DOWN, self.on_left_down)
-
-  def on_left_down(self, evt):
-    menu = wx.Menu()
-    menu.Bind(wx.EVT_MENU, self.on_monitor, menu.Append(wx.ID_ANY, "Monitor"))
-    menu.Bind(wx.EVT_MENU, self.on_command, menu.Append(wx.ID_ANY, "Command"))
-    
-    #self.toggle(True)
-    self.PopupMenu(menu)
-    #self.toggle(False)
-
-  def on_monitor(self, evt):
-    self.set_mode(self.MONITOR)
-    
-  def on_command(self, evt):
-    self.set_mode(self.COMMAND)
-
-  def set_mode(self, mode):
-    self._fri_mode_topic.publish(std_msgs.msg.Int32(mode))
 
   def on_paint(self, evt):
     dc = wx.BufferedPaintDC(self)
@@ -110,24 +74,23 @@ class FRIControl(wx.Window):
     rate = "?"
 
     if (self._stale):
-        dc.DrawBitmap(self._state_bitmap[2], 0, 0, True)
-#        dc.DrawBitmap(self._qual_bitmap[3], 40, 0, True)
-        dc.DrawBitmap(self._screen_bitmap[3], 40, 0, True)
+        #dc.DrawBitmap(self._state_bitmap[2], 0, 0, True)
+        dc.DrawBitmap(self._screen_bitmap[3], 0, 0, True)
     else:
         qual = self._status["Quality"]
         rate = "%.0f" % (1000*float(self._status["Desired Command Sample Time"]))
         
-        if (self._status["State"] == "command"):
-            dc.DrawBitmap(self._state_bitmap[0], 0, 0, True)
-        else:
-            dc.DrawBitmap(self._state_bitmap[1], 0, 0, True)
+#        if (self._status["State"] == "command"):
+#            dc.DrawBitmap(self._state_bitmap[0], 0, 0, True)
+#        else:
+#            dc.DrawBitmap(self._state_bitmap[1], 0, 0, True)
             
         if (qual == "PERFECT" or qual == "OK"):
-            dc.DrawBitmap(self._screen_bitmap[0], 40, 0, True)
+            dc.DrawBitmap(self._screen_bitmap[0], 0, 0, True)
         if (qual == "BAD"): 
-            dc.DrawBitmap(self._screen_bitmap[1], 40, 0, True)
+            dc.DrawBitmap(self._screen_bitmap[1], 0, 0, True)
         if (qual == "UNACCEPTABLE"):
-            dc.DrawBitmap(self._screen_bitmap[2], 40, 0, True)
+            dc.DrawBitmap(self._screen_bitmap[2], 0, 0, True)
 
     
 #        dc.DrawBitmap(self._screen_bitmap[0], 80, 0, True)
@@ -135,12 +98,12 @@ class FRIControl(wx.Window):
     fnt = dc.GetFont()
     fnt.SetPointSize(7)
     dc.SetFont(fnt)
-    dc.DrawLabel("Rate [ms]", wx.Rect(45, 5, 70, 32), wx.ALIGN_LEFT|wx.ALIGN_TOP)
+    dc.DrawLabel("Rate [ms]", wx.Rect(5, 5, 70, 32), wx.ALIGN_LEFT|wx.ALIGN_TOP)
     
     fnt.SetPointSize(14)
     fnt.SetWeight(wx.FONTWEIGHT_BOLD)
     dc.SetFont(fnt)
-    dc.DrawLabel("%s" % rate, wx.Rect(45, 5, 70, 32), wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM)
+    dc.DrawLabel("%s" % rate, wx.Rect(5, 5, 70, 32), wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM)
 
   def set_state(self, msg):
     self._stale = False

@@ -84,75 +84,32 @@ class MainFrame(wx.Frame):
         sizer.Add(static_sizer, 0)
         
         # Diagnostics
-        self._diagnostics_button = StatusControl(self, wx.ID_ANY, icons_path, "diag", True)
+        self._diagnostics_button = StatusControl(self, wx.ID_ANY, icons_path, "btn_diag", True)
         self._diagnostics_button.SetToolTip(wx.ToolTip("Diagnostics"))
         static_sizer.Add(self._diagnostics_button, 0)
 
         # Rosout
-        self._rosout_button = StatusControl(self, wx.ID_ANY, icons_path, "rosout", True)
+        self._rosout_button = StatusControl(self, wx.ID_ANY, icons_path, "btn_rosout", True)
         self._rosout_button.SetToolTip(wx.ToolTip("Rosout"))
         static_sizer.Add(self._rosout_button, 0)
-#~
-        #~ # Motors
-        #~ self._motors_button = StatusControl(self, wx.ID_ANY, icons_path, "motor", True)
-        #~ self._motors_button.SetToolTip(wx.ToolTip("Mode"))
-        #~ static_sizer.Add(self._motors_button, 0)
-        #~ self._motors_button.Bind(wx.EVT_LEFT_DOWN, self.on_motors_clicked)
-#~
-        #~ static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Breakers"), wx.HORIZONTAL)
-        #~ sizer.Add(static_sizer, 0)
-#~
-        #~ # Breakers
-        #~ breaker_names = ["Digital Out 1", "Digital Out 1", "Digital Out 2"]
-        #~ self._breaker_ctrls = []
-        #~ for i in xrange(0, 3):
-          #~ ctrl = BreakerControl(self, wx.ID_ANY, i, breaker_names[i], icons_path)
-          #~ ctrl.SetToolTip(wx.ToolTip("%s"%(breaker_names[i])))
-          #~ self._breaker_ctrls.append(ctrl)
-          #~ static_sizer.Add(ctrl, 0)
-
-#        static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Runstops"), wx.HORIZONTAL)
-#        sizer.Add(static_sizer, 0)
-
-        # run-stop
-#        self._runstop_ctrl = StatusControl(self, wx.ID_ANY, icons_path, "runstop", False)
-#        self._runstop_ctrl.SetToolTip(wx.ToolTip("Physical Runstop: Unknown"))
-#        static_sizer.Add(self._runstop_ctrl, 0)
-
-        # Wireless run-stop
-#        self._wireless_runstop_ctrl = StatusControl(self, wx.ID_ANY, icons_path, "runstop-wireless", False)
-#        self._wireless_runstop_ctrl.SetToolTip(wx.ToolTip("Wireless Runstop: Unknown"))
-#        static_sizer.Add(self._wireless_runstop_ctrl, 0)
-
-        #~ static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Battery"), wx.HORIZONTAL)
-        #~ sizer.Add(static_sizer, 0)
-#~
-        #~ # Battery State
-        #~ self._power_state_ctrl = PowerStateControl(self, wx.ID_ANY, icons_path)
-        #~ self._power_state_ctrl.SetToolTip(wx.ToolTip("Battery: Stale"))
-        #~ static_sizer.Add(self._power_state_ctrl, 1, wx.EXPAND)
-
-#        static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "CPU0"), wx.HORIZONTAL)
-#        sizer.Add(static_sizer, 0)
-#        
-#        self._cpu0_state = CpuFrame(self, wx.ID_ANY)
-#        static_sizer.Add(self._cpu0_state, 1, wx.EXPAND)
-#        
-#        static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "CPU1"), wx.HORIZONTAL)
-#        sizer.Add(static_sizer, 0)
-#        
-#        self._cpu1_state = CpuFrame(self, wx.ID_ANY)
-#        static_sizer.Add(self._cpu1_state, 1, wx.EXPAND)
-#
 #
         # FRI State        
         static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " FRI "), wx.HORIZONTAL)
         sizer.Add(static_sizer, 0)
         
+        self._fri_state_button = StatusControl(self, wx.ID_ANY, icons_path, "btn_state", True)
+        self._fri_state_button.SetToolTip(wx.ToolTip("FRI state"))
+        self._fri_state_button.Bind(wx.EVT_BUTTON, self.on_fri_state_clicked)
+        static_sizer.Add(self._fri_state_button, 0)
         
         self._fri_control = FRIControl(self, wx.ID_ANY, icons_path)
         self._fri_control.SetToolTip(wx.ToolTip("FRI: Stale"))
         static_sizer.Add(self._fri_control, 1, wx.EXPAND)
+        
+        self._fri_mode_topic = rospy.Publisher('fri_set_mode', std_msgs.msg.Int32)
+        
+        self.FRI_COMMAND = 1
+        self.FRI_MONITOR = 2
 
         # Robot State        
         static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " Robot "), wx.HORIZONTAL)
@@ -163,14 +120,7 @@ class MainFrame(wx.Frame):
         self._robot_control.SetToolTip(wx.ToolTip("Robot: Stale"))
         static_sizer.Add(self._robot_control, 1, wx.EXPAND)
 
-#        # Laptop Battery State
-#        static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Laptop"), wx.HORIZONTAL)
-#        sizer.Add(static_sizer, 0)
-#        
-#        self._power_state_ctrl_laptop = PowerStateControl(self, wx.ID_ANY, icons_path)
-#        self._power_state_ctrl_laptop.SetToolTip(wx.ToolTip("Laptop Battery: Stale"))
-#        static_sizer.Add(self._power_state_ctrl_laptop, 1, wx.EXPAND)
-#
+
         self._config = wx.Config("elektron_dashboard")
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -199,8 +149,8 @@ class MainFrame(wx.Frame):
         self._dashboard_message = None
         self._last_dashboard_message_time = 0.0
 
-    #~ def __del__(self):
-        #~ self._dashboard_agg_sub.unregister()
+    def __del__(self):
+        self._dashboard_agg_sub.unregister()
 
     def on_timer(self, evt):
       level = self._diagnostics_frame._diagnostics_panel.get_top_level_state()
@@ -219,17 +169,11 @@ class MainFrame(wx.Frame):
 
       self.update_rosout()
 
-      #~ if (rospy.get_time() - self._last_dashboard_message_time > 5.0):
-          #~ self._motors_button.set_stale()
-          #~ self._power_state_ctrl.set_stale()
-          #~ self._power_state_ctrl_laptop.set_stale()
-          #~ [ctrl.reset() for ctrl in self._breaker_ctrls]
-#~ #          self._runstop_ctrl.set_stale()
-#~ #          self._wireless_runstop_ctrl.set_stale()
-          #~ ctrls = [self._motors_button, self._power_state_ctrl, self._power_state_ctrl_laptop]
-          #~ ctrls.extend(self._breaker_ctrls)
-          #~ for ctrl in ctrls:
-              #~ ctrl.SetToolTip(wx.ToolTip("No message received on dashboard_agg in the last 5 seconds"))
+      if (rospy.get_time() - self._last_dashboard_message_time > 5.0):
+          self._fri_control.set_stale()
+          self._robot_control.set_stale()
+          self._fri_state_button.set_stale()
+          
 
       if (rospy.is_shutdown()):
         self.Close()
@@ -242,38 +186,6 @@ class MainFrame(wx.Frame):
         self._rosout_frame.Show()
         self._rosout_frame.Raise()
 
-    #~ def on_motors_clicked(self, evt):
-      #~ menu = wx.Menu()
-      #~ menu.Bind(wx.EVT_MENU, self.on_passive_mode, menu.Append(wx.ID_ANY, "Passive Mode"))
-      #~ menu.Bind(wx.EVT_MENU, self.on_safe_mode, menu.Append(wx.ID_ANY, "Safety Mode"))
-      #~ menu.Bind(wx.EVT_MENU, self.on_full_mode, menu.Append(wx.ID_ANY, "Full Mode"))
-      #~ self._motors_button.toggle(True)
-      #~ self.PopupMenu(menu)
-      #~ self._motors_button.toggle(False)
-#~
-    #~ def on_passive_mode(self, evt):
-      #~ passive = rospy.ServiceProxy("/turtlebot_node/set_operation_mode",turtlebot_node.srv.SetTurtlebotMode )
-      #~ try:
-        #~ passive(turtlebot_node.msg.TurtlebotSensorState.OI_MODE_PASSIVE)
-      #~ except rospy.ServiceException, e:
-        #~ wx.MessageBox("Failed to put the turtlebot in passive mode: service call failed with error: %s"%(e), "Error", wx.OK|wx.ICON_ERROR)
-#~
-    #~ def on_safe_mode(self, evt):
-      #~ safe = rospy.ServiceProxy("/turtlebot_node/set_operation_mode",turtlebot_node.srv.SetTurtlebotMode)
-      #~ try:
-        #~ safe(turtlebot_node.msg.TurtlebotSensorState.OI_MODE_SAFE)
-      #~ except rospy.ServiceException, e:
-        #~ wx.MessageBox("Failed to put the turtlebot in safe mode: service call failed with error: %s"%(e), "Error", wx.OK|wx.ICON_ERROR)
-#~
-    #~ def on_full_mode(self, evt):
-      #~ full = rospy.ServiceProxy("/turtlebot_node/set_operation_mode", turtlebot_node.srv.SetTurtlebotMode)
-      #~ try:
-        #~ full(turtlebot_node.msg.TurtlebotSensorState.OI_MODE_FULL)
-      #~ except rospy.ServiceException, e:
-        #~ wx.MessageBox("Failed to put the turtlebot in full mode: service call failed with error: %s"%(e), "Error", wx.OK|wx.ICON_ERROR)
-#~
-#~
-#~
     def dashboard_callback(self, msg):
       wx.CallAfter(self.new_dashboard_message, msg)
 
@@ -295,6 +207,7 @@ class MainFrame(wx.Frame):
  
       if (fri_status):
         self._fri_control.set_state(fri_status)
+        self.update_fri(fri_status)
       else:
         self._fri_control.set_stale()
         
@@ -302,6 +215,37 @@ class MainFrame(wx.Frame):
         self._robot_control.set_state(robot_status)
       else:
         self._robot_control.set_stale()
+
+    ###################################################################
+    # FRI related stuff
+    ###################################################################
+
+    def update_fri(self, msg):
+        if (msg["State"] == "command"):
+            self._fri_state_button.set_ok()
+        else:
+            self._fri_state_button.set_warn()
+
+    def on_fri_state_clicked(self, evt):
+        menu = wx.Menu()
+        menu.Bind(wx.EVT_MENU, self.on_monitor, menu.Append(wx.ID_ANY, "Monitor"))
+        menu.Bind(wx.EVT_MENU, self.on_command, menu.Append(wx.ID_ANY, "Command"))
+        
+        self.PopupMenu(menu)
+
+    def on_monitor(self, evt):
+        self.set_mode(self.FRI_MONITOR)
+        
+    def on_command(self, evt):
+        self.set_mode(self.FRI_COMMAND)
+    
+    def set_mode(self, mode):
+        self._fri_mode_topic.publish(std_msgs.msg.Int32(mode))
+
+
+
+
+
 
     def update_rosout(self):
         summary_dur = 30.0
