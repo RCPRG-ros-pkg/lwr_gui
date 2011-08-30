@@ -68,8 +68,8 @@ class FRIControl(wx.Window):
     self._status = {}
     self._stale = True
     
-    self.MONITOR = 1
-    self.COMMAND = 2
+    self.MONITOR = 2
+    self.COMMAND = 1
 
     self.SetSize(wx.Size(120, 40))
 
