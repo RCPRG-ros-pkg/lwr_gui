@@ -77,6 +77,15 @@ class MainFrame(wx.Frame):
 
         icons_path = path.join(roslib.packages.get_pkg_dir('lwr_dashboard'), "icons/")
 
+
+        self._robots = rospy.get_param("robots", [""])
+        
+        if (len(self._robots) == 0):
+            self._has_many = False
+        else:
+            self._has_many = True
+
+
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.SetSizer(sizer)
 
@@ -92,33 +101,46 @@ class MainFrame(wx.Frame):
         self._rosout_button = StatusControl(self, wx.ID_ANY, icons_path, "btn_rosout", True)
         self._rosout_button.SetToolTip(wx.ToolTip("Rosout"))
         static_sizer.Add(self._rosout_button, 0)
-#
-        # FRI State        
-        static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " FRI "), wx.HORIZONTAL)
-        sizer.Add(static_sizer, 0)
-        
-        self._fri_state_button = StatusControl(self, wx.ID_ANY, icons_path, "btn_state", True)
-        self._fri_state_button.SetToolTip(wx.ToolTip("FRI state"))
-        self._fri_state_button.Bind(wx.EVT_BUTTON, self.on_fri_state_clicked)
-        static_sizer.Add(self._fri_state_button, 0)
-        
-        self._fri_control = FRIControl(self, wx.ID_ANY, icons_path)
-        self._fri_control.SetToolTip(wx.ToolTip("FRI: Stale"))
-        static_sizer.Add(self._fri_control, 1, wx.EXPAND)
-        
-        self._fri_mode_topic = rospy.Publisher('fri_set_mode', std_msgs.msg.Int32)
-        
+
         self.FRI_COMMAND = 1
         self.FRI_MONITOR = 2
 
-        # Robot State        
-        static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " Robot "), wx.HORIZONTAL)
-        sizer.Add(static_sizer, 0)
-        
-        
-        self._robot_control = RobotControl(self, wx.ID_ANY, icons_path)
-        self._robot_control.SetToolTip(wx.ToolTip("Robot: Stale"))
-        static_sizer.Add(self._robot_control, 1, wx.EXPAND)
+        self._fri_state_button = {}
+        self._fri_control = {}
+        self._fri_mode_topic = {}
+        self._robot_control = {}
+
+        for robot in self._robots:
+            robot_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " %s " % robot), wx.HORIZONTAL)
+
+
+            # FRI State        
+            static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " FRI "), wx.HORIZONTAL)
+            robot_sizer.Add(static_sizer, 0)
+            
+            self._fri_state_button[robot] = StatusControl(self, wx.ID_ANY, icons_path, "btn_state", True)
+            self._fri_state_button[robot].SetToolTip(wx.ToolTip("FRI state"))
+            self._fri_state_button[robot].Bind(wx.EVT_BUTTON, lambda x: self.on_fri_state_clicked(x, robot))
+            static_sizer.Add(self._fri_state_button[robot], 0)
+            
+            self._fri_control[robot] = FRIControl(self, wx.ID_ANY, icons_path)
+            self._fri_control[robot].SetToolTip(wx.ToolTip("FRI: Stale"))
+            static_sizer.Add(self._fri_control[robot], 1, wx.EXPAND)
+            
+            self._fri_mode_topic[robot] = rospy.Publisher("%s/fri_set_mode" % robot, std_msgs.msg.Int32)
+            
+            # Robot State        
+            static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " Robot "), wx.HORIZONTAL)
+            robot_sizer.Add(static_sizer, 0)
+            
+            
+            self._robot_control[robot] = RobotControl(self, wx.ID_ANY, icons_path)
+            self._robot_control[robot].SetToolTip(wx.ToolTip("Robot: Stale"))
+            static_sizer.Add(self._robot_control[robot], 1, wx.EXPAND)
+
+            sizer.Add(robot_sizer, 0)
+
+
 
 
         self._config = wx.Config("elektron_dashboard")
@@ -144,13 +166,20 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_TIMER, self.on_timer)
         self._timer.Start(500)
 
-        self._dashboard_agg_sub = rospy.Subscriber('diagnostics_agg', diagnostic_msgs.msg.DiagnosticArray, self.dashboard_callback)
+        self._topic = "diagnostic"
+
+        self._subs = []
+        for n in self._robots:
+            sub = rospy.Subscriber("%s/%s" % (n, self._topic), diagnostic_msgs.msg.DiagnosticArray, lambda x: self.dashboard_callback(x, n))
+            self._subs.append(sub)
 
         self._dashboard_message = None
         self._last_dashboard_message_time = 0.0
 
     def __del__(self):
-        self._dashboard_agg_sub.unregister()
+        for sub in self._subs:
+            sub.unregister()
+
 
     def on_timer(self, evt):
       level = self._diagnostics_frame._diagnostics_panel.get_top_level_state()
@@ -170,9 +199,14 @@ class MainFrame(wx.Frame):
       self.update_rosout()
 
       if (rospy.get_time() - self._last_dashboard_message_time > 5.0):
-          self._fri_control.set_stale()
-          self._robot_control.set_stale()
-          self._fri_state_button.set_stale()
+          for ctrl in self._fri_control.values(): 
+              ctrl.set_stale()
+              
+          for ctrl in self._robot_control.values(): 
+              ctrl.set_stale()
+              
+          for ctrl in self._fri_state_button.values(): 
+              ctrl.set_stale()
           
 
       if (rospy.is_shutdown()):
@@ -186,10 +220,11 @@ class MainFrame(wx.Frame):
         self._rosout_frame.Show()
         self._rosout_frame.Raise()
 
-    def dashboard_callback(self, msg):
-      wx.CallAfter(self.new_dashboard_message, msg)
+    def dashboard_callback(self, msg, robot):
+      wx.CallAfter(self.new_dashboard_message, msg, robot)
 
-    def new_dashboard_message(self, msg):
+
+    def new_dashboard_message(self, msg, robot):
       self._dashboard_message = msg
       self._last_dashboard_message_time = rospy.get_time()
 
@@ -197,50 +232,55 @@ class MainFrame(wx.Frame):
       robot_status = {}
       
       for status in msg.status:
-          if status.name == "/FRI state":
+          print robot
+          print status.name
+          
+          if status.name == "FRI state":
               for value in status.values:
                   fri_status[value.key] = value.value
-          if status.name == "/robot state":
+          if status.name == "robot state":
               for value in status.values:
                   robot_status[value.key] = value.value
 
  
       if (fri_status):
-        self._fri_control.set_state(fri_status)
-        self.update_fri(fri_status)
+        self._fri_control[robot].set_state(fri_status)
+        self.update_fri(fri_status, robot)
       else:
-        self._fri_control.set_stale()
+        self._fri_control[robot].set_stale()
         
       if (robot_status):
-        self._robot_control.set_state(robot_status)
+        self._robot_control[robot].set_state(robot_status)
       else:
-        self._robot_control.set_stale()
+        self._robot_control[robot].set_stale()
+
+
 
     ###################################################################
     # FRI related stuff
     ###################################################################
 
-    def update_fri(self, msg):
+    def update_fri(self, msg, robot):
         if (msg["State"] == "command"):
-            self._fri_state_button.set_ok()
+            self._fri_state_button[robot].set_ok()
         else:
-            self._fri_state_button.set_warn()
+            self._fri_state_button[robot].set_warn()
 
-    def on_fri_state_clicked(self, evt):
+    def on_fri_state_clicked(self, ev, robot):
         menu = wx.Menu()
-        menu.Bind(wx.EVT_MENU, self.on_monitor, menu.Append(wx.ID_ANY, "Monitor"))
-        menu.Bind(wx.EVT_MENU, self.on_command, menu.Append(wx.ID_ANY, "Command"))
+        menu.Bind(wx.EVT_MENU, lambda x: self.on_monitor(x, robot), menu.Append(wx.ID_ANY, "Monitor"))
+        menu.Bind(wx.EVT_MENU, lambda x: self.on_command(x, robot), menu.Append(wx.ID_ANY, "Command"))
         
         self.PopupMenu(menu)
 
-    def on_monitor(self, evt):
-        self.set_mode(self.FRI_MONITOR)
+    def on_monitor(self, evt, robot):
+        self.set_mode(self.FRI_MONITOR, robot)
         
-    def on_command(self, evt):
-        self.set_mode(self.FRI_COMMAND)
+    def on_command(self, evt, robot):
+        self.set_mode(self.FRI_COMMAND, robot)
     
-    def set_mode(self, mode):
-        self._fri_mode_topic.publish(std_msgs.msg.Int32(mode))
+    def set_mode(self, mode, robot):
+        self._fri_mode_topic[robot].publish(std_msgs.msg.Int32(mode))
 
 
 
