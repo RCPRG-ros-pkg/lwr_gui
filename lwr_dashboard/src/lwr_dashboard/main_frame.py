@@ -57,6 +57,8 @@ from robot_control import RobotControl
 from diagnostics_frame import DiagnosticsFrame
 from rosout_frame import RosoutFrame
 
+import re
+
 class MainFrame(wx.Frame):
     _CONFIG_WINDOW_X = "/Window/X"
     _CONFIG_WINDOW_Y = "/Window/Y"
@@ -71,6 +73,7 @@ class MainFrame(wx.Frame):
             getattr(rxtools, "initRoscpp")
             rxtools.initRoscpp("lwr_dashboard_cpp", anonymous=True)
         except AttributeError:
+            print "rxtools error"
             pass
 
         self.SetTitle('Kuka LWR Dashboard (%s)' % rosenv.get_master_uri())
@@ -79,7 +82,7 @@ class MainFrame(wx.Frame):
 
 
         self._robots = rospy.get_param("robots", [""])
-        
+
         if (len(self._robots) == 0):
             self._has_many = False
         else:
@@ -91,7 +94,7 @@ class MainFrame(wx.Frame):
 
         static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " ROS state "), wx.HORIZONTAL)
         sizer.Add(static_sizer, 0)
-        
+
         # Diagnostics
         self._diagnostics_button = StatusControl(self, wx.ID_ANY, icons_path, "btn_diag", True)
         self._diagnostics_button.SetToolTip(wx.ToolTip("Diagnostics"))
@@ -114,26 +117,26 @@ class MainFrame(wx.Frame):
             robot_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " %s " % robot), wx.HORIZONTAL)
 
 
-            # FRI State        
+            # FRI State
             static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " FRI "), wx.HORIZONTAL)
             robot_sizer.Add(static_sizer, 0)
-            
+
             self._fri_state_button[robot] = StatusControl(self, wx.ID_ANY, icons_path, "btn_state", True)
             self._fri_state_button[robot].SetToolTip(wx.ToolTip("FRI state"))
             self._fri_state_button[robot].Bind(wx.EVT_BUTTON, lambda x: self.on_fri_state_clicked(x, robot))
             static_sizer.Add(self._fri_state_button[robot], 0)
-            
+
             self._fri_control[robot] = FRIControl(self, wx.ID_ANY, icons_path)
             self._fri_control[robot].SetToolTip(wx.ToolTip("FRI: Stale"))
             static_sizer.Add(self._fri_control[robot], 1, wx.EXPAND)
-            
-            self._fri_mode_topic[robot] = rospy.Publisher("%s/fri_set_mode" % robot, std_msgs.msg.Int32)
-            
-            # Robot State        
+
+            self._fri_mode_topic[robot] = rospy.Publisher("%sarm_controller/fri_set_mode" % robot, std_msgs.msg.Int32)
+
+            # Robot State
             static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " Robot "), wx.HORIZONTAL)
             robot_sizer.Add(static_sizer, 0)
-            
-            
+
+
             self._robot_control[robot] = RobotControl(self, wx.ID_ANY, icons_path)
             self._robot_control[robot].SetToolTip(wx.ToolTip("Robot: Stale"))
             static_sizer.Add(self._robot_control[robot], 1, wx.EXPAND)
@@ -169,9 +172,10 @@ class MainFrame(wx.Frame):
         self._topic = "diagnostic"
 
         self._subs = []
-        for n in self._robots:
-            sub = rospy.Subscriber("%s/%s" % (n, self._topic), diagnostic_msgs.msg.DiagnosticArray, lambda x: self.dashboard_callback(x, n))
-            self._subs.append(sub)
+	sub = rospy.Subscriber(self._topic, diagnostic_msgs.msg.DiagnosticArray, self.dashboard_callback)
+        self._subs.append(sub)
+
+        print "Subs.size %d" % len(self._subs)
 
         self._dashboard_message = None
         self._last_dashboard_message_time = 0.0
@@ -199,15 +203,15 @@ class MainFrame(wx.Frame):
       self.update_rosout()
 
       if (rospy.get_time() - self._last_dashboard_message_time > 5.0):
-          for ctrl in self._fri_control.values(): 
+          for ctrl in self._fri_control.values():
               ctrl.set_stale()
-              
-          for ctrl in self._robot_control.values(): 
+
+          for ctrl in self._robot_control.values():
               ctrl.set_stale()
-              
-          for ctrl in self._fri_state_button.values(): 
+
+          for ctrl in self._fri_state_button.values():
               ctrl.set_stale()
-          
+
 
       if (rospy.is_shutdown()):
         self.Close()
@@ -220,35 +224,38 @@ class MainFrame(wx.Frame):
         self._rosout_frame.Show()
         self._rosout_frame.Raise()
 
-    def dashboard_callback(self, msg, robot):
-      wx.CallAfter(self.new_dashboard_message, msg, robot)
+    def dashboard_callback(self, msg):
+      wx.CallAfter(self.new_dashboard_message, msg)
 
 
-    def new_dashboard_message(self, msg, robot):
+    def new_dashboard_message(self, msg):
       self._dashboard_message = msg
       self._last_dashboard_message_time = rospy.get_time()
 
       fri_status = {}
       robot_status = {}
-      
+
       for status in msg.status:
-          print robot
-          print status.name
-          
-          if status.name == "FRI state":
+
+          parts = status.name.split(" ");
+
+          robot = parts[0]
+          dtype = parts[1]
+
+          if dtype == "FRI":
               for value in status.values:
                   fri_status[value.key] = value.value
-          if status.name == "robot state":
+          if dtype == "robot":
               for value in status.values:
                   robot_status[value.key] = value.value
 
- 
+
       if (fri_status):
         self._fri_control[robot].set_state(fri_status)
         self.update_fri(fri_status, robot)
       else:
         self._fri_control[robot].set_stale()
-        
+
       if (robot_status):
         self._robot_control[robot].set_state(robot_status)
       else:
@@ -270,15 +277,15 @@ class MainFrame(wx.Frame):
         menu = wx.Menu()
         menu.Bind(wx.EVT_MENU, lambda x: self.on_monitor(x, robot), menu.Append(wx.ID_ANY, "Monitor"))
         menu.Bind(wx.EVT_MENU, lambda x: self.on_command(x, robot), menu.Append(wx.ID_ANY, "Command"))
-        
+
         self.PopupMenu(menu)
 
     def on_monitor(self, evt, robot):
         self.set_mode(self.FRI_MONITOR, robot)
-        
+
     def on_command(self, evt, robot):
         self.set_mode(self.FRI_COMMAND, robot)
-    
+
     def set_mode(self, mode, robot):
         self._fri_mode_topic[robot].publish(std_msgs.msg.Int32(mode))
 
@@ -315,12 +322,12 @@ class MainFrame(wx.Frame):
             tooltip += "\nInfo: %s"%(summary.info)
         if (summary.debug):
             tooltip += "\nDebug: %s"%(summary.debug)
-        
+
         if (len(tooltip) == 0):
             tooltip = "Rosout: no recent activity"
         else:
             tooltip = "Rosout: recent activity:" + tooltip
-        
+
         if (tooltip != self._rosout_button.GetToolTip().GetTip()):
             self._rosout_button.SetToolTip(wx.ToolTip(tooltip))
 
@@ -354,4 +361,3 @@ class MainFrame(wx.Frame):
       self.save_config()
 
       self.Destroy()
-
