@@ -113,7 +113,10 @@ class MainFrame(wx.Frame):
         self._fri_mode_topic = {}
         self._robot_control = {}
 
+        i = 0
         for robot in self._robots:
+			
+            print "Preparing robot: '%s'"%(robot)
             robot_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " %s " % robot), wx.HORIZONTAL)
 
 
@@ -123,12 +126,14 @@ class MainFrame(wx.Frame):
 
             self._fri_state_button[robot] = StatusControl(self, wx.ID_ANY, icons_path, "btn_state", True)
             self._fri_state_button[robot].SetToolTip(wx.ToolTip("FRI state"))
-            self._fri_state_button[robot].Bind(wx.EVT_BUTTON, lambda x: self.on_fri_state_clicked(x, robot))
+           
+            self._fri_state_button[robot].Bind(wx.EVT_BUTTON, lambda x, r=robot: self.on_fri_state_clicked(x, r))
             static_sizer.Add(self._fri_state_button[robot], 0)
 
             self._fri_control[robot] = FRIControl(self, wx.ID_ANY, icons_path)
             self._fri_control[robot].SetToolTip(wx.ToolTip("FRI: Stale"))
             static_sizer.Add(self._fri_control[robot], 1, wx.EXPAND)
+
 
             self._fri_mode_topic[robot] = rospy.Publisher("%sarm_controller/fri_set_mode" % robot, std_msgs.msg.Int32)
 
@@ -136,14 +141,13 @@ class MainFrame(wx.Frame):
             static_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, " Robot "), wx.HORIZONTAL)
             robot_sizer.Add(static_sizer, 0)
 
-
             self._robot_control[robot] = RobotControl(self, wx.ID_ANY, icons_path)
             self._robot_control[robot].SetToolTip(wx.ToolTip("Robot: Stale"))
             static_sizer.Add(self._robot_control[robot], 1, wx.EXPAND)
 
             sizer.Add(robot_sizer, 0)
 
-
+            i = i + 1
 
 
         self._config = wx.Config("elektron_dashboard")
@@ -172,7 +176,7 @@ class MainFrame(wx.Frame):
         self._topic = "diagnostic"
 
         self._subs = []
-	sub = rospy.Subscriber(self._topic, diagnostic_msgs.msg.DiagnosticArray, self.dashboard_callback)
+        sub = rospy.Subscriber(self._topic, diagnostic_msgs.msg.DiagnosticArray, self.dashboard_callback)
         self._subs.append(sub)
 
         print "Subs.size %d" % len(self._subs)
@@ -275,8 +279,8 @@ class MainFrame(wx.Frame):
 
     def on_fri_state_clicked(self, ev, robot):
         menu = wx.Menu()
-        menu.Bind(wx.EVT_MENU, lambda x: self.on_monitor(x, robot), menu.Append(wx.ID_ANY, "Monitor"))
-        menu.Bind(wx.EVT_MENU, lambda x: self.on_command(x, robot), menu.Append(wx.ID_ANY, "Command"))
+        menu.Bind(wx.EVT_MENU, lambda x, r=robot: self.on_monitor(x, r), menu.Append(wx.ID_ANY, "Monitor"))
+        menu.Bind(wx.EVT_MENU, lambda x, r=robot: self.on_command(x, r), menu.Append(wx.ID_ANY, "Command"))
 
         self.PopupMenu(menu)
 
@@ -359,5 +363,5 @@ class MainFrame(wx.Frame):
 
     def on_close(self, event):
       self.save_config()
-
+      print "Closing..."
       self.Destroy()
